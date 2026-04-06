@@ -2,16 +2,18 @@ const socket = io();
 const localVideo = document.getElementById('localVideo');
 const remoteVideo = document.getElementById('remoteVideo');
 const callButton = document.getElementById('callButton');
+const toggleBtn = document.getElementById('toggleBtn');
 
+let isVisible;
 let localStream;
 let peerConnection;
 
-// Because Tailscale puts us on a virtual LAN, we don't need STUN/TURN servers!
+// Assuming Tailscale is used
 const rtcConfig = { iceServers: [] }; 
 
 async function startMedia() {
     try {
-        // Request a reasonable HD feed (720p) at 30fps
+        // Request a 720p@30 feed
         const constraints = {
             audio: true,
             video: {
@@ -38,13 +40,11 @@ function createPeerConnection() {
 
     peerConnection = new RTCPeerConnection(rtcConfig);
     
-    // 1. Add the tracks normally
     localStream.getTracks().forEach(track => {
         peerConnection.addTrack(track, localStream);
     });
 
-    // 2. The CORRECT way to force H.264 (Using Transceivers)
-    // Find the transceiver handling the video track
+    // Find the transceiver handling the video track, forcing H.264
     const videoTransceiver = peerConnection.getTransceivers().find(t => 
         t.sender.track && t.sender.track.kind === 'video'
     );
@@ -52,7 +52,7 @@ function createPeerConnection() {
     // Failsafe check to ensure the browser supports the API
     if (videoTransceiver && typeof videoTransceiver.setCodecPreferences === 'function' && RTCRtpReceiver.getCapabilities) {
         const capabilities = RTCRtpReceiver.getCapabilities('video');
-        // Look for H.264 (making it case-insensitive just to be safe)
+        // Look for H.264 codecs
         const h264Codecs = capabilities.codecs.filter(c => c.mimeType.toLowerCase() === 'video/h264');
         
         if (h264Codecs.length > 0) {
@@ -63,7 +63,7 @@ function createPeerConnection() {
         }
     }
 
-    // 3. Handle incoming remote tracks
+    // Handle incoming remote tracks
     peerConnection.ontrack = event => {
         remoteVideo.srcObject = event.streams[0];
     };
@@ -75,7 +75,7 @@ function createPeerConnection() {
         }
     };
     
-    // Optional: Log connection status for debugging
+    // [DEBUG] Log connection status
     peerConnection.oniceconnectionstatechange = () => {
         console.log("Connection Status:", peerConnection.iceConnectionState);
     };
@@ -87,6 +87,7 @@ callButton.onclick = async () => {
     await peerConnection.setLocalDescription(offer);
     socket.emit('message', { type: 'offer', offer: offer });
 };
+
 
 socket.on('message', async (message) => {
     if (message.type === 'offer') {
@@ -101,5 +102,11 @@ socket.on('message', async (message) => {
         await peerConnection.addIceCandidate(new RTCIceCandidate(message.candidate));
     }
 });
+
+toggleBtn.onclick = () => {
+    isVisible = !isVisible;
+    localVideo.style.display = isVisible ? 'block' : 'none';
+    toggleBtn.textContent = isVisible ? 'Hide My Camera' : 'Show My Camera';
+};
 
 startMedia();

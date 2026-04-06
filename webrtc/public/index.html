@@ -1,23 +1,288 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>P2P Intercom</title>
-    <style>
-        body { background: #222; color: white; display: flex; flex-direction: column; align-items: center; font-family: sans-serif; }
-        video { width: 45%; border: 2px solid #555; margin: 10px; background: #000; }
-        .video-container { display: flex; justify-content: center; width: 100%; }
-        button { padding: 10px 20px; font-size: 16px; cursor: pointer; margin-top: 20px; }
-    </style>
+  <meta charset="utf-8" />
+  <title>Telerover v1</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #111;
+      color: #fff;
+      font-family: sans-serif;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Remote feed fills the whole screen */
+    #remoteVideo {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      background: #000;
+      z-index: 1;
+    }
+
+    /* Local feed picture-in-picture */
+    #localVideo {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      width: 22vw;
+      min-width: 180px;
+      max-width: 340px;
+      aspect-ratio: 16 / 9;
+      object-fit: cover;
+      background: #111;
+      border: 2px solid rgba(255,255,255,0.85);
+      border-radius: 12px;
+      z-index: 20;
+    }
+
+    #hud {
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      z-index: 30;
+      background: rgba(0,0,0,0.55);
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .status-ok { color: #4caf50; }
+
+    #speedWrap {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 30;
+      background: rgba(0,0,0,0.55);
+      padding: 12px 16px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    #speed { width: 200px; }
+
+    #startBtn {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 40;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 12px;
+      background: #4caf50;
+      color: #fff;
+      font-size: 16px;
+      cursor: pointer;
+    }
+  </style>
 </head>
 <body>
-    <h2>Secure Video Link</h2>
-    <div class="video-container">
-        <video id="localVideo" autoplay muted playsinline></video>
-        <video id="remoteVideo" autoplay playsinline></video>
-    </div>
-    <button id="callButton">Start Call</button>
+  <video id="remoteVideo" autoplay playsinline></video>
+  <video id="localVideo"  autoplay muted playsinline></video>
 
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="client.js"></script>
+  <div id="hud">
+    <div id="roleLabel">Role: …</div>
+    <div id="status">Status: idle</div>
+    <div id="hint"></div>
+  </div>
+
+  <div id="speedWrap">
+    <label for="speed">Speed</label>
+    <input id="speed" type="range" min="0.25" max="1.0" step="0.05" value="0.65" />
+    <span id="speedValue">0.65</span>
+  </div>
+
+  <button id="startBtn">Start Video</button>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const role = new URLSearchParams(window.location.search).get('role') || 'controller';
+
+    const socket = io({ transports: ['websocket', 'polling'] });
+
+    const localVideo  = document.getElementById('localVideo');
+    const remoteVideo = document.getElementById('remoteVideo');
+    const startBtn    = document.getElementById('startBtn');
+    const statusEl    = document.getElementById('status');
+    const speedSlider = document.getElementById('speed');
+    const speedValue  = document.getElementById('speedValue');
+
+    document.getElementById('roleLabel').textContent = 'Role: ' + role;
+    document.getElementById('hint').textContent = role === 'controller'
+      ? 'Drive: W A S D or arrow keys'
+      : 'Streaming Pi camera…';
+
+    let localStream = null;
+    let pc = null;
+    let started = false;
+    let activeKeys = new Set();
+    let heldCommand = null;
+    let holdInterval = null;
+
+    speedSlider.addEventListener('input', () => {
+      speedValue.textContent = Number(speedSlider.value).toFixed(2);
+    });
+
+    function setStatus(s, ok) {
+      statusEl.textContent = 'Status: ' + s;
+      statusEl.className = ok ? 'status-ok' : '';
+    }
+
+    // WebRTC protocol
+    function createPeer() {
+      pc = new RTCPeerConnection({ iceServers: [] }); // Tailscale handles routing
+
+      // Try to force H.264 for Pi hardware encoding
+      const videoTransceiver = pc.getTransceivers().find(
+        t => t.sender.track && t.sender.track.kind === 'video'
+      );
+      if (videoTransceiver &&
+          typeof videoTransceiver.setCodecPreferences === 'function' &&
+          RTCRtpReceiver.getCapabilities) {
+        const caps = RTCRtpReceiver.getCapabilities('video');
+        const h264 = caps.codecs.filter(c => c.mimeType.toLowerCase() === 'video/h264');
+        if (h264.length > 0) {
+          videoTransceiver.setCodecPreferences(h264);
+          console.log('H.264 forced via transceiver');
+        }
+      }
+
+      pc.ontrack = (e) => { remoteVideo.srcObject = e.streams[0]; };
+
+      pc.onicecandidate = (e) => {
+        if (e.candidate) {
+          socket.emit('message', { type: 'candidate', candidate: e.candidate });
+        }
+      };
+
+      pc.oniceconnectionstatechange = () => {
+        setStatus('peer: ' + pc.iceConnectionState,
+          pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed');
+      };
+    }
+
+    async function startMedia() {
+      if (started) return;
+      started = true;
+
+      setStatus('requesting camera…');
+      localStream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 24 } },
+        audio: false
+      });
+
+      localVideo.srcObject = localStream;
+      createPeer();
+      localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+      setStatus('camera ready', true);
+
+      // Controller sends the offer to start the call
+      if (role === 'controller') {
+        setTimeout(async () => {
+          // Re-check H.264 preference after tracks are added
+          const vt = pc.getTransceivers().find(t => t.sender.track && t.sender.track.kind === 'video');
+          if (vt && typeof vt.setCodecPreferences === 'function' && RTCRtpReceiver.getCapabilities) {
+            const caps = RTCRtpReceiver.getCapabilities('video');
+            const h264 = caps.codecs.filter(c => c.mimeType.toLowerCase() === 'video/h264');
+            if (h264.length > 0) vt.setCodecPreferences(h264);
+          }
+          const offer = await pc.createOffer();
+          await pc.setLocalDescription(offer);
+          socket.emit('message', { type: 'offer', offer });
+          setStatus('offer sent…');
+        }, 600);
+      }
+    }
+
+    socket.on('connect', () => setStatus('socket connected', true));
+
+    // Uses the same 'message' channel as the original client.js
+    socket.on('message', async (msg) => {
+      if (!pc) return;
+      try {
+        if (msg.type === 'offer' && role === 'robot') {
+          await pc.setRemoteDescription(new RTCSessionDescription(msg.offer));
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+          socket.emit('message', { type: 'answer', answer });
+          setStatus('answer sent');
+        } else if (msg.type === 'answer' && role === 'controller') {
+          await pc.setRemoteDescription(new RTCSessionDescription(msg.answer));
+          setStatus('connected', true);
+        } else if (msg.type === 'candidate') {
+          await pc.addIceCandidate(new RTCIceCandidate(msg.candidate));
+        }
+      } catch (err) {
+        console.error(err);
+        setStatus('signal error');
+      }
+    });
+
+    startBtn.addEventListener('click', async () => {
+      try {
+        await startMedia();
+        startBtn.style.display = 'none';
+      } catch (e) {
+        console.error(e);
+        setStatus('camera failed');
+      }
+    });
+
+    // Robot auto-starts its camera
+    if (role === 'robot') {
+      window.addEventListener('load', () => setTimeout(() => startBtn.click(), 500));
+    }
+
+    // Motor control (controller only)
+    function sendControl(command) {
+      if (role !== 'controller') return;
+      socket.emit('control', { source: 'controller', command, speed: Number(speedSlider.value) });
+    }
+
+    function sendStop() {
+      if (role !== 'controller') return;
+      socket.emit('stop');
+    }
+
+    function beginHold(command) {
+      if (role !== 'controller' || heldCommand === command) return;
+      endHold();
+      heldCommand = command;
+      sendControl(command);
+      holdInterval = setInterval(() => sendControl(command), 100);
+    }
+
+    function endHold() {
+      if (holdInterval) { clearInterval(holdInterval); holdInterval = null; }
+      if (heldCommand !== null) { heldCommand = null; sendStop(); }
+    }
+
+    const keyMap = {
+      w: 'forward', a: 'left', s: 'back', d: 'right',
+      ArrowUp: 'forward', ArrowLeft: 'left', ArrowDown: 'back', ArrowRight: 'right'
+    };
+
+    window.addEventListener('keydown', (e) => {
+      const cmd = keyMap[e.key];
+      if (cmd && !activeKeys.has(e.key)) { activeKeys.add(e.key); beginHold(cmd); }
+    });
+
+    window.addEventListener('keyup', (e) => {
+      activeKeys.delete(e.key);
+      if (activeKeys.size === 0) endHold();
+    });
+
+    window.addEventListener('blur', endHold);
+    window.addEventListener('beforeunload', endHold);
+  </script>
 </body>
 </html>
