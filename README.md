@@ -1,2 +1,2 @@
-# telerover
+# Telerover
 App-Controlled Telepresence Rover
