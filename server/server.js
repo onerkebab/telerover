@@ -59,6 +59,11 @@ function sendMotor(command, speed = 0) {
 
 startMotor();
 
+setTimeout(() => {
+    console.log('motorReady:', motorReady);
+    sendMotor('forward', 0.65);
+    setTimeout(() => sendMotor('stop'), 1000);
+}, 3000);
 // ----------------------------
 // Watchdog — stop if no command for 350ms
 // (motor.py has its own watchdog too, double safety)
@@ -83,7 +88,7 @@ io.on('connection', (socket) => {
 
   // Motor commands from controller
   socket.on('control', (data) => {
-    if (data.source !== 'controller') return;
+    console.log('control:', JSON.stringify(data));  // add this
     lastCommandTime = Date.now();
     sendMotor(data.command || 'stop', parseFloat(data.speed) || 0.65);
   });

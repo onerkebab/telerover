@@ -177,7 +177,7 @@
       setStatus('requesting camera…');
       localStream = await navigator.mediaDevices.getUserMedia({
         video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 24 } },
-        audio: false
+        audio: true
       });
 
       localVideo.srcObject = localStream;
