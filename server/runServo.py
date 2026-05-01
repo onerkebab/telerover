@@ -1,63 +1,62 @@
-import pygame
+#!/usr/bin/env python3
+import sys
+import json
+import time
 from adafruit_servokit import ServoKit
 
-kit = ServoKit(channels=16)
-kit.servo[0].angle = 90
-kit.servo[1].angle = 90
+pan_angle  = 90  # servo 1 — left/right, pan center
+tilt_angle = 180  # servo 0 — up/down, tilt center
 
-pygame.init()
-pygame.display.set_mode((100, 100))
+# Initialize with retry
+kit = None
+while kit is None:
+    try:
+        kit = ServoKit(channels=16)
+        kit.servo[0].angle = tilt_angle 
+        kit.servo[1].angle = pan_angle
+    except Exception as e:
+        sys.stderr.write(f"ServoKit init failed, retrying: {e}\n")
+        sys.stderr.flush()
+        time.sleep(1)
 
-move_delay = 0.1
-last_move_time = {'up': 0, 'down': 0, 'left': 0, 'right': 0}
 
-def move_up():
-    current_time = pygame.time.get_ticks() / 1000.0
-    if current_time - last_move_time['up'] > move_delay:
-        kit.servo[0].angle = min(180, kit.servo[0].angle + 5)
-        last_move_time['up'] = current_time
 
-def move_down():
-    current_time = pygame.time.get_ticks() / 1000.0
-    if current_time - last_move_time['down'] > move_delay:
-        kit.servo[0].angle = max(0, kit.servo[0].angle - 5)
-        last_move_time['down'] = current_time
+STEP = 5
 
-def move_left():
-    current_time = pygame.time.get_ticks() / 1000.0
-    if current_time - last_move_time['left'] > move_delay:
-        kit.servo[1].angle = max(0, kit.servo[1].angle - 5)
-        last_move_time['left'] = current_time
+sys.stdout.write("ready\n")
+sys.stdout.flush()
 
-def move_right():
-    current_time = pygame.time.get_ticks() / 1000.0
-    if current_time - last_move_time['right'] > move_delay:
-        kit.servo[1].angle = min(180, kit.servo[1].angle + 5)
-        last_move_time['right'] = current_time
+for line in sys.stdin:
+    line = line.strip()
+    if not line:
+        continue
+    try:
+        msg = json.loads(line)
+        cmd = msg.get("command", "")
 
-def stop():
-    pass
+        if cmd == "up":
+            tilt_angle = min(180, tilt_angle + STEP)
+            kit.servo[0].angle = tilt_angle
+        elif cmd == "down":
+            tilt_angle = max(0, tilt_angle - STEP)
+            kit.servo[0].angle = tilt_angle
+        elif cmd == "left":
+            pan_angle = max(0, pan_angle - STEP)
+            kit.servo[1].angle = pan_angle
+        elif cmd == "right":
+            pan_angle = min(180, pan_angle + STEP)
+            kit.servo[1].angle = pan_angle
+        elif cmd == "center":
+            pan_angle  = 90
+            tilt_angle = 180
+            kit.servo[0].angle = tilt_angle
+            kit.servo[1].angle = pan_angle
 
-running = True
-while running:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-        elif event.type == pygame.KEYDOWN:
-            if event.key != pygame.K_UP and event.key != pygame.K_DOWN and event.key != pygame.K_LEFT and event.key != pygame.K_RIGHT:
-                running = False
-   
-    keys = pygame.key.get_pressed()
-   
-    if keys[pygame.K_UP]:
-        move_up()
-    elif keys[pygame.K_DOWN]:
-        move_down()
-    elif keys[pygame.K_LEFT]:
-        move_left()
-    elif keys[pygame.K_RIGHT]:
-        move_right()
-    else:
-        stop()
-
-pygame.quit()
+    except Exception as e:
+        sys.stderr.write(f"servo error: {e}\n")
+        sys.stderr.flush()
+        # Don't crash — try to reinitialize
+        try:
+            kit = ServoKit(channels=16)
+        except:
+            pass

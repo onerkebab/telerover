@@ -51,6 +51,45 @@ function startMotor() {
   });
 }
 
+// ----------------------------
+// Servo control via runServo.py subprocess
+// ----------------------------
+let servoProc = null;
+let servoReady = false;
+
+function startServo() {
+  const scriptPath = path.join(__dirname, 'runServo.py');
+  servoProc = spawn('python3', [scriptPath], {
+    stdio: ['pipe', 'pipe', 'pipe']
+  });
+
+  servoProc.stdout.on('data', (data) => {
+    const msg = data.toString().trim();
+    if (msg === 'ready') {
+      servoReady = true;
+      console.log('runServo.py ready');
+    }
+  });
+
+  servoProc.stderr.on('data', (data) => {
+    console.error('servo.py error:', data.toString().trim());
+  });
+
+  servoProc.on('exit', (code) => {
+    servoReady = false;
+    console.warn(`runServo.py exited (code ${code}) — restarting in 2s`);
+    setTimeout(startServo, 2000);
+  });
+}
+
+function sendServo(command) {
+  if (!servoReady || !servoProc) return;
+  const msg = JSON.stringify({ command }) + '\n';
+  servoProc.stdin.write(msg);
+}
+
+startServo();
+
 function sendMotor(command, speed = 0) {
   if (!motorReady || !motorProc) return;
   const msg = JSON.stringify({ command, speed }) + '\n';
@@ -61,7 +100,7 @@ startMotor();
 
 setTimeout(() => {
     console.log('motorReady:', motorReady);
-    sendMotor('forward', 0.65);
+    sendMotor('forward', 0.5);
     setTimeout(() => sendMotor('stop'), 1000);
 }, 3000);
 // ----------------------------
@@ -83,14 +122,19 @@ setInterval(() => {
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
 
-  // WebRTC signaling relay
+  // WebRTC signaling relay 
   socket.on('message', (msg) => socket.broadcast.emit('message', msg));
 
   // Motor commands from controller
   socket.on('control', (data) => {
-    console.log('control:', JSON.stringify(data));  // add this
-    lastCommandTime = Date.now();
-    sendMotor(data.command || 'stop', parseFloat(data.speed) || 0.65);
+      console.log('control received:', JSON.stringify(data));
+      lastCommandTime = Date.now();
+      sendMotor(data.command || 'stop', parseFloat(data.speed) || 0.65);
+  });
+
+  socket.on('tilt', (data) => {
+  console.log('tilt received:', JSON.stringify(data));
+  sendServo(data.command || 'center');
   });
 
   socket.on('stop', () => {

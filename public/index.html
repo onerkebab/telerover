@@ -141,7 +141,6 @@
     function createPeer() {
       pc = new RTCPeerConnection({ iceServers: [] }); // Tailscale handles routing
 
-      /*
       // Try to force H.264 for Pi hardware encoding
       const videoTransceiver = pc.getTransceivers().find(
         t => t.sender.track && t.sender.track.kind === 'video'
@@ -150,13 +149,12 @@
           typeof videoTransceiver.setCodecPreferences === 'function' &&
           RTCRtpReceiver.getCapabilities) {
         const caps = RTCRtpReceiver.getCapabilities('video');
-        
         const h264 = caps.codecs.filter(c => c.mimeType.toLowerCase() === 'video/h264');
         if (h264.length > 0) {
           videoTransceiver.setCodecPreferences(h264);
           console.log('H.264 forced via transceiver');
         }
-      }*/
+      }
 
       pc.ontrack = (e) => { remoteVideo.srcObject = e.streams[0]; };
 
@@ -180,9 +178,9 @@
       localStream = await navigator.mediaDevices.getUserMedia({
         video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 24 } },
         audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true		
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false
         }
       });
 
@@ -194,14 +192,13 @@
       // Controller sends the offer to start the call
       if (role === 'controller') {
         setTimeout(async () => {
-          /*
           // Re-check H.264 preference after tracks are added
           const vt = pc.getTransceivers().find(t => t.sender.track && t.sender.track.kind === 'video');
           if (vt && typeof vt.setCodecPreferences === 'function' && RTCRtpReceiver.getCapabilities) {
             const caps = RTCRtpReceiver.getCapabilities('video');
             const h264 = caps.codecs.filter(c => c.mimeType.toLowerCase() === 'video/h264');
             if (h264.length > 0) vt.setCodecPreferences(h264);
-          }*/
+          }
           const offer = await pc.createOffer();
           await pc.setLocalDescription(offer);
           socket.emit('message', { type: 'offer', offer });
@@ -213,8 +210,6 @@
     socket.on('connect', () => setStatus('socket connected', true));
 
     // Uses the same 'message' channel as the original client.js
-    let candidateQueue = []; // Add this near your other let declarations at the top
-
     socket.on('message', async (msg) => {
       if (!pc) return;
       try {
@@ -224,26 +219,11 @@
           await pc.setLocalDescription(answer);
           socket.emit('message', { type: 'answer', answer });
           setStatus('answer sent');
-          
-          // Process any queued ICE candidates now that description is set
-          while (candidateQueue.length > 0) {
-            await pc.addIceCandidate(candidateQueue.shift());
-          }
         } else if (msg.type === 'answer' && role === 'controller') {
           await pc.setRemoteDescription(new RTCSessionDescription(msg.answer));
           setStatus('connected', true);
-          
-          // Process any queued ICE candidates now that description is set
-          while (candidateQueue.length > 0) {
-            await pc.addIceCandidate(candidateQueue.shift());
-          }
         } else if (msg.type === 'candidate') {
-          // If description is ready, add candidate. Otherwise, queue it.
-          if (pc.remoteDescription && pc.remoteDescription.type) {
-            await pc.addIceCandidate(new RTCIceCandidate(msg.candidate));
-          } else {
-            candidateQueue.push(new RTCIceCandidate(msg.candidate));
-          }
+          await pc.addIceCandidate(new RTCIceCandidate(msg.candidate));
         }
       } catch (err) {
         console.error(err);

@@ -50,13 +50,13 @@ def drive(command, speed=0):
     global last_command_time
     last_command_time = time.monotonic()
     if command == "forward":
-        set_side("right", speed, True);  set_side("left", speed, True)
-    elif command == "back":
-        set_side("right", speed, False); set_side("left", speed, False)
-    elif command == "left":
-        set_side("right", speed, False); set_side("left", speed, True)
-    elif command == "right":
         set_side("right", speed, True);  set_side("left", speed, False)
+    elif command == "back":
+        set_side("right", speed, False); set_side("left", speed, True)
+    elif command == "left":
+        set_side("right", speed, False); set_side("left", speed, False)
+    elif command == "right":
+        set_side("right", speed, True);  set_side("left", speed, True)
     else:
         stop_all()
 
