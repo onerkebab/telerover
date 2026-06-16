@@ -34,12 +34,6 @@ The physical rover is built on a 4WD two-tier compact chassis:
   <img src="assets/frontal_view.jpg" alt="Telerover" width="50%">
 </p>
 
-<center>
-
-*Frontal view of Telerover, without LCD display and clamp attached.*
-
-</center>
-
 * **Compute:** Raspberry Pi 4B.
 * **Motor control:** Pololu Dual MC33926 Motor Driver Shield.
 * **Drivetrain:** 4-wheel differential drive.
@@ -68,12 +62,6 @@ The physical rover is built on a 4WD two-tier compact chassis:
 <p align="center">
   <img src="assets/app_ui.jpg" alt="Telerover" width="90%">
 </p>
-
-<center>
-
-*Android app user interface.*
-
-</center>
 
 ## Repo Structure
 
