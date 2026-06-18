@@ -19,8 +19,6 @@ while kit is None:
         sys.stderr.flush()
         time.sleep(1)
 
-
-
 STEP = 5
 
 sys.stdout.write("ready\n")
@@ -55,8 +53,9 @@ for line in sys.stdin:
     except Exception as e:
         sys.stderr.write(f"servo error: {e}\n")
         sys.stderr.flush()
-        # Don't crash — try to reinitialize
+        # Attempt to reinitialize
         try:
             kit = ServoKit(channels=16)
         except:
             pass
+    

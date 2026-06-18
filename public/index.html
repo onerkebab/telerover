@@ -15,7 +15,6 @@
       overflow: hidden;
     }
 
-    /* Remote feed fills the whole screen */
     #remoteVideo {
       position: fixed;
       inset: 0;
@@ -26,7 +25,6 @@
       z-index: 1;
     }
 
-    /* Local feed picture-in-picture */
     #localVideo {
       position: fixed;
       top: 16px;
@@ -139,9 +137,9 @@
 
     // WebRTC protocol
     function createPeer() {
-      pc = new RTCPeerConnection({ iceServers: [] }); // Tailscale handles routing
+      pc = new RTCPeerConnection({ iceServers: [] });
 
-      // Try to force H.264 for Pi hardware encoding
+      // Force H.264
       const videoTransceiver = pc.getTransceivers().find(
         t => t.sender.track && t.sender.track.kind === 'video'
       );
@@ -192,7 +190,6 @@
       // Controller sends the offer to start the call
       if (role === 'controller') {
         setTimeout(async () => {
-          // Re-check H.264 preference after tracks are added
           const vt = pc.getTransceivers().find(t => t.sender.track && t.sender.track.kind === 'video');
           if (vt && typeof vt.setCodecPreferences === 'function' && RTCRtpReceiver.getCapabilities) {
             const caps = RTCRtpReceiver.getCapabilities('video');
@@ -209,7 +206,6 @@
 
     socket.on('connect', () => setStatus('socket connected', true));
 
-    // Uses the same 'message' channel as the original client.js
     socket.on('message', async (msg) => {
       if (!pc) return;
       try {
@@ -246,7 +242,7 @@
       window.addEventListener('load', () => setTimeout(() => startBtn.click(), 500));
     }
 
-    // Motor control (controller only)
+    // Motor control
     function sendControl(command) {
       if (role !== 'controller') return;
       socket.emit('control', { source: 'controller', command, speed: Number(speedSlider.value) });

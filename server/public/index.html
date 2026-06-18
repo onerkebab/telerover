@@ -139,7 +139,7 @@
 
     // WebRTC protocol
     function createPeer() {
-      pc = new RTCPeerConnection({ iceServers: [] }); // Tailscale handles routing
+      pc = new RTCPeerConnection({ iceServers: [] });
 
       /*
       // Try to force H.264 for Pi hardware encoding
@@ -195,7 +195,6 @@
       if (role === 'controller') {
         setTimeout(async () => {
           /*
-          // Re-check H.264 preference after tracks are added
           const vt = pc.getTransceivers().find(t => t.sender.track && t.sender.track.kind === 'video');
           if (vt && typeof vt.setCodecPreferences === 'function' && RTCRtpReceiver.getCapabilities) {
             const caps = RTCRtpReceiver.getCapabilities('video');
@@ -212,8 +211,7 @@
 
     socket.on('connect', () => setStatus('socket connected', true));
 
-    // Uses the same 'message' channel as the original client.js
-    let candidateQueue = []; // Add this near your other let declarations at the top
+    let candidateQueue = []; 
 
     socket.on('message', async (msg) => {
       if (!pc) return;
@@ -225,15 +223,13 @@
           socket.emit('message', { type: 'answer', answer });
           setStatus('answer sent');
           
-          // Process any queued ICE candidates now that description is set
+          // Process queued ICE candidates
           while (candidateQueue.length > 0) {
             await pc.addIceCandidate(candidateQueue.shift());
           }
         } else if (msg.type === 'answer' && role === 'controller') {
           await pc.setRemoteDescription(new RTCSessionDescription(msg.answer));
           setStatus('connected', true);
-          
-          // Process any queued ICE candidates now that description is set
           while (candidateQueue.length > 0) {
             await pc.addIceCandidate(candidateQueue.shift());
           }
@@ -266,7 +262,7 @@
       window.addEventListener('load', () => setTimeout(() => startBtn.click(), 500));
     }
 
-    // Motor control (controller only)
+    // Motor control
     function sendControl(command) {
       if (role !== 'controller') return;
       socket.emit('control', { source: 'controller', command, speed: Number(speedSlider.value) });

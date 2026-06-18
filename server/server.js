@@ -16,11 +16,8 @@ const io = require('socket.io')(server);
 
 app.use(express.static('public'));
 
-// ----------------------------
-// Motor control via motor.py subprocess
-// Python/gpiozero/lgpio handles GPIO — proven to work on this Pi
+// Motor control via motor.py
 // Node sends JSON commands over stdin
-// ----------------------------
 let motorProc = null;
 let motorReady = false;
 
@@ -51,9 +48,7 @@ function startMotor() {
   });
 }
 
-// ----------------------------
-// Servo control via runServo.py subprocess
-// ----------------------------
+// Pan-tilt servo control via runServo.py
 let servoProc = null;
 let servoReady = false;
 
@@ -103,10 +98,8 @@ setTimeout(() => {
     sendMotor('forward', 0.5);
     setTimeout(() => sendMotor('stop'), 1000);
 }, 3000);
-// ----------------------------
-// Watchdog — stop if no command for 350ms
-// (motor.py has its own watchdog too, double safety)
-// ----------------------------
+
+// Watchdog stops if no command for 350ms
 const WATCHDOG_MS = 350;
 let lastCommandTime = Date.now();
 
@@ -116,9 +109,7 @@ setInterval(() => {
   }
 }, 50);
 
-// ----------------------------
 // Socket.IO
-// ----------------------------
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
 

@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""
-Motor controller for Pololu MC33926.
-Reads JSON commands from stdin, one per line:
-  {"command": "forward", "speed": 0.65}
-  {"command": "stop"}
-"""
+
+# Motor controller for Pololu MC33926.
+# Reads JSON commands from stdin, line-by-line
+# Examples:
+# {"command": "forward", "speed": 0.65}
+# {"command": "stop"}
+
 import sys
 import json
 import time
