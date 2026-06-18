@@ -28,7 +28,7 @@ To complement the rover, an Android mobile app was also developed using React Na
 ## System Architecture
 
 <p align="center">
-  <img src="assets/Diagram.svg" alt="Telerover" width="100%">
+  <img src="assets/sys_arch.svg" alt="Telerover" width="100%">
 </p>
 
 ### Hardware Stack
