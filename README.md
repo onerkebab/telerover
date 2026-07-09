@@ -55,14 +55,14 @@ The physical rover is built on a 4WD two-tier compact chassis:
 
 ### Software Stack
 
-* **Wireless Connection (Tailscale):** A Tailscale mesh VPN connects the rover and the remote client into a single private network. This lets the two devices reach each other directly from any network without port forwarding or public IPs, and simplifies WebRTC.
+* **Wireless Connection (Tailscale):** A Tailscale mesh VPN connects the rover and the remote controller into a single private network. This lets the two devices reach each other directly from any network without port forwarding or public IPs, and simplifies WebRTC.
 * **Server/Signaling (Node.js):** An Express & Socket.io server handles WebRTC signaling (SDP offers/answers and ICE candidates) and relays JSON control commands. 
 * **Hardware Control (Python):** 
     * `motor.py`: Listens to `stdin` for JSON commands to send PWM signals to the MC33926 motor drivers. 
       * Includes a software watchdog to kill motors if the connection drops.
     * `runServo.py`: Manages the pan-tilt I2C servos for camera articulation.
 * **Web Client (HTML/JS):** A browser-based interface running locally on the Pi (for the LCD) and remotely for the controller, utilizing the WebRTC API for media.
-* **Mobile Client (Kotlin/Jetpack Compose): A native Android application that embeds the WebRTC controller page in a WebView for the live video feed and two-way audio, while using a native Kotlin Socket.io client for the motor and pan/tilt commands. 
+* **Mobile Client (Kotlin/Jetpack Compose):** A native Android application that embeds the WebRTC controller page in a WebView for the live video feed and two-way audio, while using a native Kotlin Socket.io client for the motor and pan/tilt commands. 
 
 <p align="center">
   <img src="assets/app_ui.jpg" alt="Telerover" width="90%">
@@ -91,9 +91,7 @@ Instructions:
 2. Install Tailscale on the Android device and sign in to the same tailnet as the Pi.
 3. Start the backend on the Pi: node server.js.
 4. Launch the rover's WebRTC page on the Pi's display: 
-  DISPLAY=:0 chromium --use-gl=egl --ignore-gpu-blocklist \
-  --autoplay-policy=no-user-gesture-required --ignore-certificate-errors \
-  --disable-background-timer-throttling "https://localhost:3000/?role=robot" &
+DISPLAY=:0 chromium --use-gl=egl --ignore-gpu-blocklist \--autoplay-policy=no-user-gesture-required --ignore-certificate-errors \--disable-background-timer-throttling "https://localhost:3000/?role=robot" &
 3. Connect the device via USB-C or pair over Wi-Fi, and press Run.
 
 ## Room for Improvement
