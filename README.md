@@ -10,9 +10,7 @@
 
 Telerover is a proof-of-concept (PoC) telepresence rover designed to demonstrate the integration of low-level hardware control, real-time two-way audio/video streaming, and full-stack software architecture. Inspiration was largely taken from [enabot's ROLA Mini FamilyBot](https://store.enabot.com/products/rola-mini-familybot), although the crude Telerover features way more zipties, tape and standoffs than a polished consumer product.
 
-The rover consists of a 4-wheel differential drive, 2-tier chassis powered by a Raspberry Pi 4B, which handles local hardware control, peripheral interfacing and WebRTC media routing. A Node.js signaling server brokers peer-to-peer connections between the rover and remote clients (web interface/mobile app), allowing for ultra-low-latency video feeds and instantaneous motor/camera control. 
-
-To complement the rover, a native Android mobile app was also developed using Kotlin and Jetpack Compose. It embeds a WebView to handle the WebRTC media stream while using a native Socket.io connection for low-latency motor and camera control, connecting to the Pi-hosted Node.js server to provide an interactive UI for telepresence and rover control.
+The rover consists of a 4-wheel differential drive, 2-tier chassis powered by a Raspberry Pi 4B, which handles local hardware control, peripheral interfacing and WebRTC media routing. A Node.js signaling server brokers peer-to-peer connections between the rover and remote clients (web interface/mobile app), allowing for ultra-low-latency video feeds and instantaneous motor/camera control. A native Android mobile app was also developed using Kotlin and Jetpack Compose. It embeds a WebView to handle the WebRTC media stream while using a native Socket.io connection for low-latency motor and camera control, connecting to the Pi-hosted Node.js server to provide an interactive UI for telepresence and rover control.
 
 ### Demonstrated Functions:
 
