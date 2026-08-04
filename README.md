@@ -125,3 +125,6 @@ Check out our LinkedIn and GitHub pages here!
 *The Telerover team at the 2026 University of Rochester Design Day.*
 
 </div>
+
+## License
+This project is licensed under the [GNU General Public License v3.0](LICENSE).
