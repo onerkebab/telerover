@@ -74,29 +74,34 @@ The physical rover is built on a 4WD two-tier compact chassis:
 * `server/legacy/` - Previous iterations of motor scripts and local gamepad (evdev) testing.
 * `assets/` - Media of the Telerover project.
 
-## Running the Android App
+## Running the App
 
-The entire app is contained in a single file, app/src/main/java/com/example/teleroverapp/MainActivity.kt, which holds the Compose UI, the WebView setup for WebRTC media, and the native Socket.io client for motor and camera-tilt commands.
+The entire Android app is contained in [`MainActivity.kt`](android_app/app/src/main/java/com/example/teleroverapp/MainActivity.kt), which holds the Compose UI, the WebView setup for WebRTC media, and the native Socket.io client for motor and camera-tilt commands.
 
-Set the Pi's Tailscale IP in MainActivity.kt before building. It appears in two places:
+Set the Pi's Tailscale IP in `MainActivity.kt` before building. It appears in two places:
 
-* The Socket.io connection: buildTrustAllSocket("https://<PI_TAILSCALE_IP>:3000")
-* The WebView URL: loadUrl("https://<PI_TAILSCALE_IP>:3000/?role=controller")
+* The Socket.io connection: `buildTrustAllSocket("https://<PI_TAILSCALE_IP>:3000")`
+* The WebView URL: `loadUrl("https://<PI_TAILSCALE_IP>:3000/?role=controller")`
 
 Instructions:
 
-1. Open teleroverapp as a project in Android Studio.
+1. Open `teleroverapp` as a project in Android Studio.
 2. Install Tailscale on the Android device and sign in to the same tailnet as the Pi.
-3. Start the backend on the Pi: node server.js.
+3. Start the backend on the Pi:
+```bash
+node server.js
+```
 4. Launch the rover's WebRTC page on the Pi's display: 
+```bash
 DISPLAY=:0 chromium --use-gl=egl --ignore-gpu-blocklist \--autoplay-policy=no-user-gesture-required --ignore-certificate-errors \--disable-background-timer-throttling "https://localhost:3000/?role=robot" &
-3. Connect the device via USB-C or pair over Wi-Fi, and press Run.
+```
+5. Connect the device via USB-C or pair over Wi-Fi, and press 'Run'.
 
 ## Room for Improvement
 
 While this PoC successfully validates the core software/hardware integration, there are many potential improvements before the project can transition from a modular prototype to an ultra-compact, consumer-styled companion robot like the ROLA Mini Family Bot. 
 
-* Hardware Miniaturization: Design a custom 3D-printed chassis and integrated PCBs to replace the two-tier plate system and off-the-shelf breakout boards.
+* Design a custom 3D-printed chassis and integrated PCBs to replace the two-tier plate system and off-the-shelf breakout boards.
 * Unify dual-battery architecture into single power source with voltage regulators, integrated charging and decoupling logic/actuation power.
 * Improve UX and QoL:
     * Implement an on-screen joystick control scheme in the React Native app.
