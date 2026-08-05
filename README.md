@@ -2,15 +2,13 @@
 
 ![GPLv3](https://img.shields.io/badge/License-GPLv3-%23BD0000) ![Python](https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=fff) ![Node.js](https://img.shields.io/badge/Node.js-6DA55F?logo=node.js&logoColor=white) ![Kotlin](https://img.shields.io/badge/Kotlin-%237F52FF.svg?logo=kotlin&logoColor=white) ![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-%234285F4.svg?logo=jetpackcompose&logoColor=white) ![HTML](https://img.shields.io/badge/HTML-%23E34F26.svg?logo=html5&logoColor=white)
 
-## About Telerover
+Telerover is a proof-of-concept (PoC) telepresence rover designed to demonstrate the integration of low-level hardware control, real-time two-way audio/video streaming, and full-stack software architecture. Inspiration was largely taken from [enabot's ROLA Mini FamilyBot](https://store.enabot.com/products/rola-mini-familybot), although the crude Telerover features way more zipties, tape and standoffs than a polished consumer product.
 
 <p align="center">
   <img src="assets/main_view.jpg" alt="Telerover" width="40%">
 </p>
 
-Telerover is a proof-of-concept (PoC) telepresence rover designed to demonstrate the integration of low-level hardware control, real-time two-way audio/video streaming, and full-stack software architecture. Inspiration was largely taken from [enabot's ROLA Mini FamilyBot](https://store.enabot.com/products/rola-mini-familybot), although the crude Telerover features way more zipties, tape and standoffs than a polished consumer product.
-
-The rover consists of a 4-wheel differential drive chassis powered by a Raspberry Pi 4B, which handles local hardware control, peripheral interfacing and WebRTC media routing. A Node.js signaling server brokers peer-to-peer connections between the rover and remote clients (web interface/mobile app), allowing for ultra-low-latency video feeds and instantaneous motor/camera control. A native Android mobile app was also developed using Kotlin and Jetpack Compose. It embeds a WebView to handle the WebRTC media stream while using a native Socket.io connection for low-latency motor and camera control, connecting to the Pi-hosted Node.js server to provide an interactive UI for telepresence and rover control.
+The rover consists of a 4-wheel differential drive chassis powered by a Raspberry Pi 4B, which handles local hardware control, peripheral interfacing and WebRTC media routing. A Node.js signaling server brokers peer-to-peer connections between the rover and remote clients (web/mobile app), allowing ultra-low-latency video feeds and motor and camera control. A native Android mobile app was also developed using Kotlin and Jetpack Compose. It embeds a WebView to handle the WebRTC media stream while using a native Socket.io connection for rover control, connecting to the Pi-hosted Node.js server to provide an interactive UI.
 
 ### Demonstrated Functions:
 
